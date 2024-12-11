@@ -37,7 +37,7 @@ class Gateway_Settings {
 	 * @param string $gateway The gateway to get settings for. Either 'lco' or 'ledyer_payments'. Defaults to the latter.
 	 */
 	public function __construct( $gateway ) {
-		$this->$gateway = $gateway;
+		$this->gateway = $gateway;
 
 		if ( 'lco' === $gateway ) {
 			$this->settings = get_option( 'woocommerce_lco_settings' );
