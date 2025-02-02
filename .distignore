@@ -5,6 +5,7 @@
 /tests
 /languages/*-backup-*
 /.vscode
+/vendor
 .editorconfig
 .distignore
 .gitignore
