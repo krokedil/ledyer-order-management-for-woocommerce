@@ -83,6 +83,8 @@ function lom_capture_ledyer_order( $order_id, $api, $action = false ) {
 		return;
 	}
 
+	/*
+	// To be implemented in the future.
 	if ( ! $order->get_meta( '_ledyer_ready_for_capture', true ) ) {
 		$errmsg = 'Ledyer order is not ready for capture.';
 
@@ -93,7 +95,7 @@ function lom_capture_ledyer_order( $order_id, $api, $action = false ) {
 		}
 		$order->save();
 		return;
-	}
+	} */
 
 	$orderMapper = new \LedyerOm\OrderMapper( $order );
 	$data        = $orderMapper->woo_to_ledyer_capture_order_lines();
