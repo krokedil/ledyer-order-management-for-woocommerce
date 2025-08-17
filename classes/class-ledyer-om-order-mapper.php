@@ -12,7 +12,7 @@ use Brick\Math\RoundingMode;
 defined( 'ABSPATH' ) || exit();
 
 class OrderMapper {
-	
+
 
 	/**
 	 * Ledyer order lines.
@@ -46,14 +46,14 @@ class OrderMapper {
 	/**
 	 * WooCommerce order.
 	 *
-	 * @var bool|WC_Order|WC_Order_Refund
+	 * @var \WC_Order|\WC_Order_Refund
 	 */
 	public $order;
 
 	/**
 	 * Order mapper constructor.
 	 *
-	 * @param int    $order WooCommerce order
+	 * @param \WC_Order|\WC_Order_Refund $order WooCommerce order
 	 */
 	public function __construct( $order ) {
 		$this->order = $order;
@@ -62,34 +62,37 @@ class OrderMapper {
 	public function woo_to_ledyer_edit_order_lines() {
 		$this->process_order_line_items();
 		return array(
-			'orderLines'                => $this->ledyer_order_lines,
-			'totalOrderAmount'          => $this->ledyer_total_order_amount,
-			'totalOrderAmountExclVat'   => $this->ledyer_total_order_amount_excl_vat,
-			'totalOrderVatAmount'       => $this->ledyer_total_order_vat_amount,
+			'orderLines'              => $this->ledyer_order_lines,
+			'totalOrderAmount'        => $this->ledyer_total_order_amount,
+			'totalOrderAmountExclVat' => $this->ledyer_total_order_amount_excl_vat,
+			'totalOrderVatAmount'     => $this->ledyer_total_order_vat_amount,
 		);
 	}
 
 	public function woo_to_ledyer_capture_order_lines() {
 		$this->process_order_line_items();
 		return array(
-			'orderLines'                => $this->ledyer_order_lines,
-			'totalCaptureAmount'        => $this->ledyer_total_order_amount,
+			'orderLines'         => $this->ledyer_order_lines,
+			'totalCaptureAmount' => $this->ledyer_total_order_amount,
 		);
 	}
 
 	public function woo_to_ledyer_refund_order_lines() {
-		$this->process_order_line_items(false);
+		$this->process_order_line_items( false );
 
-		$refund_order_lines = array_map(function($n) {
-			$n['quantity'] = abs($n['quantity']);
-			$n['totalAmount'] = abs($n['totalAmount']);
-			$n['totalVatAmount'] = abs($n['totalVatAmount']);
-			return $n;
-		}, $this->ledyer_order_lines);
+		$refund_order_lines = array_map(
+			function ( $n ) {
+				$n['quantity']       = abs( $n['quantity'] );
+				$n['totalAmount']    = abs( $n['totalAmount'] );
+				$n['totalVatAmount'] = abs( $n['totalVatAmount'] );
+				return $n;
+			},
+			$this->ledyer_order_lines
+		);
 
 		return array(
-			'orderLines'                => $refund_order_lines,
-			'totalRefundAmount'         => abs($this->ledyer_total_order_amount),
+			'orderLines'        => $refund_order_lines,
+			'totalRefundAmount' => abs( $this->ledyer_total_order_amount ),
 		);
 	}
 
@@ -97,22 +100,22 @@ class OrderMapper {
 	/**
 	 * Process WooCommerce order items to Ledyer order lines.
 	 */
-	private function process_order_line_items($recalc = true) {
+	private function process_order_line_items( $recalc = true ) {
 		if ( $recalc ) {
 			$this->order->calculate_shipping();
 			$this->order->calculate_taxes();
 			$this->order->calculate_totals();
 		}
 
-		$total = Money::of($this->order->get_total(), $this->order->get_currency(), null, RoundingMode::HALF_UP);
-		$totalTax = Money::of($this->order->get_total_tax(), $this->order->get_currency(), null, RoundingMode::HALF_UP);
-		$totalExclTax = $total->minus($totalTax);
-		$this->ledyer_total_order_amount = $total->getMinorAmount()->toInt();
-		$this->ledyer_total_order_vat_amount  = $totalTax->getMinorAmount()->toInt();
-		$this->ledyer_total_order_amount_excl_vat  = $totalExclTax->getMinorAmount()->toInt();
+		$total                                    = Money::of( $this->order->get_total(), $this->order->get_currency(), null, RoundingMode::HALF_UP );
+		$totalTax                                 = Money::of( $this->order->get_total_tax(), $this->order->get_currency(), null, RoundingMode::HALF_UP );
+		$totalExclTax                             = $total->minus( $totalTax );
+		$this->ledyer_total_order_amount          = $total->getMinorAmount()->toInt();
+		$this->ledyer_total_order_vat_amount      = $totalTax->getMinorAmount()->toInt();
+		$this->ledyer_total_order_amount_excl_vat = $totalExclTax->getMinorAmount()->toInt();
 
 		foreach ( $this->order->get_items() as $order_item ) {
-			$ledyer_item = $this->process_order_item( $order_item, $this->order );
+			$ledyer_item     = $this->process_order_item( $order_item, $this->order );
 			$order_line_item = apply_filters( 'lom_wc_order_line_item', $ledyer_item, $order_item );
 			if ( $order_line_item ) {
 				$this->ledyer_order_lines[] = $order_line_item;
@@ -120,7 +123,7 @@ class OrderMapper {
 		}
 
 		foreach ( $this->order->get_items( 'shipping' ) as $order_item ) {
-			$this->ledyer_order_lines[] = $this->process_order_item( $order_item, $this->order, 'shippingFee', 1);
+			$this->ledyer_order_lines[] = $this->process_order_item( $order_item, $this->order, 'shippingFee', 1 );
 		}
 
 		foreach ( $this->order->get_items( 'fee' ) as $order_item ) {
@@ -131,34 +134,34 @@ class OrderMapper {
 		// YITH gift cards seems to be processed as discount aka normal coupons so no need to handle them
 		// PW WooCommerce Gift Cards.
 		foreach ( $this->order->get_items( 'pw_gift_card' ) as $gift_card ) {
-			$code                   = $gift_card->get_card_number();
-			$label                  = esc_html__( 'Gift card', 'pw-woocommerce-gift-cards' ) . ' ' . $code;
-			$gift_card_sku          = apply_filters( 'lco_pw_gift_card_sku', esc_html__( 'giftcard', 'ledyer-checkout-for-woocommerce' ), $code );			$gift_card_amount = intval( $gift_card->get_amount() * -100 );
-			$gift_card_amount_minor = $this->amount_to_minor( $gift_card->get_amount(), $this->order->get_currency() );
-			$gift_card_amount       = $gift_card_amount_minor * -1;
-			$order_item             = array(
-				'type'                  => 'giftCard',
-				'reference'             => $gift_card_sku,
-				'description'	        => $label,
-				'quantity'              => 1,
-				'vat'                   => 0,
-				'totalAmount'          	=> $gift_card_amount,
-				'totalVatAmount'      	=> 0,
+			$code                       = $gift_card->get_card_number();
+			$label                      = esc_html__( 'Gift card', 'pw-woocommerce-gift-cards' ) . ' ' . $code;
+			$gift_card_sku              = apply_filters( 'lco_pw_gift_card_sku', esc_html__( 'giftcard', 'ledyer-checkout-for-woocommerce' ), $code );
+			$gift_card_amount           = intval( $gift_card->get_amount() * -100 );
+			$gift_card_amount_minor     = $this->amount_to_minor( $gift_card->get_amount(), $this->order->get_currency() );
+			$gift_card_amount           = $gift_card_amount_minor * -1;
+			$order_item                 = array(
+				'type'           => 'giftCard',
+				'reference'      => $gift_card_sku,
+				'description'    => $label,
+				'quantity'       => 1,
+				'vat'            => 0,
+				'totalAmount'    => $gift_card_amount,
+				'totalVatAmount' => 0,
 			);
 			$this->ledyer_order_lines[] = $order_item;
 		}
-
 	}
 
-	private function process_order_item( $order_item, $order, $ledyerType = null, $quantity = null) {
+	private function process_order_item( $order_item, $order, $ledyerType = null, $quantity = null ) {
 		return array(
-			'type'                  => $ledyerType ? $ledyerType : $this->get_item_type( $order_item ),
-			'reference'             => $this->get_item_reference( $order_item ),
-			'description'           => $this->get_item_name( $order_item ),
-			'quantity'              => $quantity ? $quantity : $this->get_item_quantity( $order_item ),
-			'vat'                   => $this->get_item_tax_rate( $order, $order_item ),
-			'totalAmount'           => $this->get_item_total_amount( $order_item, $order->get_currency()),
-			'totalVatAmount'        => $this->get_item_tax_amount( $order_item, $order->get_currency()),
+			'type'           => $ledyerType ? $ledyerType : $this->get_item_type( $order_item ),
+			'reference'      => $this->get_item_reference( $order_item ),
+			'description'    => $this->get_item_name( $order_item ),
+			'quantity'       => $quantity ? $quantity : $this->get_item_quantity( $order_item ),
+			'vat'            => $this->get_item_tax_rate( $order, $order_item ),
+			'totalAmount'    => $this->get_item_total_amount( $order_item, $order->get_currency() ),
+			'totalVatAmount' => $this->get_item_tax_amount( $order_item, $order->get_currency() ),
 		);
 	}
 
@@ -194,7 +197,7 @@ class OrderMapper {
 
 	private function get_item_name( $order_line_item ) {
 		$order_line_item_name = $order_line_item->get_name();
-		return substr( (string) wp_strip_all_tags( $order_line_item_name ), 0, 200);
+		return substr( (string) wp_strip_all_tags( $order_line_item_name ), 0, 200 );
 	}
 
 	private function get_item_quantity( $order_line_item ) {
@@ -205,7 +208,7 @@ class OrderMapper {
 		}
 	}
 
-	public function get_item_tax_rate( $order, $order_line_item = false) {
+	public function get_item_tax_rate( $order, $order_line_item = false ) {
 		if ( 'coupon' === $order_line_item->get_type() ) {
 			return 0;
 		}
@@ -242,13 +245,12 @@ class OrderMapper {
 		} else {
 			$item_tax_amount = 0;
 		}
-		$amount = $this->amount_to_minor( $item_tax_amount, $currency);
+		$amount = $this->amount_to_minor( $item_tax_amount, $currency );
 		return $amount;
 	}
 
-	private function amount_to_minor($amount, $currency) {
-		$money = Money::of($amount, $currency, null, RoundingMode::HALF_UP);
+	private function amount_to_minor( $amount, $currency ) {
+		$money = Money::of( $amount, $currency, null, RoundingMode::HALF_UP );
 		return $money->getMinorAmount()->toInt();
 	}
-
 }
