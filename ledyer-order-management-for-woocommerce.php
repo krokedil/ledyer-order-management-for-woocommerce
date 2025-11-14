@@ -10,7 +10,7 @@
  * Domain Path: /languages
  *
  * WC requires at least: 4.0.0
- * WC tested up to: 10.2.2
+ * WC tested up to: 10.3.5
  *
  * Copyright (c) 2017-2025 Ledyer
  *
